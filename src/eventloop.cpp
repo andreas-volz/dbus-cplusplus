@@ -28,7 +28,7 @@
 #include <dbus-c++/eventloop.h>
 #include <dbus-c++/debug.h>
 
-#include <sys/poll.h>
+#include <poll.h>
 #include <sys/time.h>
 
 #include <dbus/dbus.h>
