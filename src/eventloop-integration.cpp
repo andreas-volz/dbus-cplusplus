@@ -36,7 +36,7 @@
 /* STD */
 #include <string.h>
 #include <cassert>
-#include <sys/poll.h>
+#include <poll.h>
 #include <fcntl.h>
 #include <unistd.h>
 
