@@ -24,6 +24,7 @@ TestApp::TestApp()
 {
   testList.push_back("test1");
   testList.push_back("testByte");
+  testList.push_back("testPropChanged");
 
   cout << "initialize DBus..." << endl;
   initDBus();
@@ -43,7 +44,7 @@ void TestApp::initDBus()
   g_testComIntro = &testComIntro;
 
   cout << "Start server..." << endl;
-  TestAppIntroProvider testComProviderIntro(conn, &testComIntro);
+  TestAppIntroProvider testComProviderIntro(conn);
   conn.request_name("DBusCpp.Test.Com.Intro");
 
   mTestToDBusPipe = dispatcher.add_pipe(TestApp::testHandler, NULL);
@@ -102,5 +103,9 @@ void TestApp::testHandler(const void *data, void *buffer, unsigned int nbyte)
   else if (string(str) == "testByte")
   {
     g_testComIntro->testByte(4);
+  }
+  else if (string(str) == "testPropChanged")
+  {
+    g_testComIntro->testPropChanged("secondValue");
   }
 }

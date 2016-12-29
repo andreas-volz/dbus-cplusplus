@@ -8,7 +8,7 @@
 
     <signal name="test1Result">
     </signal>
-    
+
     <method name="testByte">
       <annotation name="org.freedesktop.DBus.Method.NoReply" value="true"/>
       <arg type="y" name="Byte" direction="in"/>
@@ -18,6 +18,12 @@
       <arg type="y" name="Byte" direction="in"/>
     </signal>
 
+    <method name="testPropChanged">
+      <annotation name="org.freedesktop.DBus.Method.NoReply" value="true"/>
+      <arg type="s" name="val" direction="in"/>
+    </method>
+
+    <property name="testProperty" type="s" access="readwrite"/>
 
   </interface>
 </node>

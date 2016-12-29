@@ -12,6 +12,7 @@ using namespace std;
 class TestAppIntro :
   public DBusCpp::Test::Com::Intro_proxy,
   public DBus::IntrospectableProxy,
+  public DBus::PropertiesProxy,
   public DBus::ObjectProxy
 {
 public:
@@ -32,6 +33,23 @@ public:
   {
     printf("TestByteResult: %d\n", Byte);
     mTestResult = true;
+    pthread_cond_signal(&mCondition);
+  }
+
+  void PropertiesChanged(const std::string& interface,
+                         const std::map<std::string, DBus::Variant>& changed_properties,
+                         const std::vector<std::string>& invalidated_properties)
+  {
+    cout << "PropertiesChanged on interface " << interface;
+    std::map<std::string, DBus::Variant>::const_iterator it = changed_properties.find("testProperty");
+    if (changed_properties.end() != it &&
+        changed_properties.size() == 1 &&
+        invalidated_properties.empty())
+    {
+      cout << " with value " << it->second.operator std::string();
+      mTestResult = true;
+    }
+    cout << endl;
     pthread_cond_signal(&mCondition);
   }
 
