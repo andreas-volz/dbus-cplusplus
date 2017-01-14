@@ -61,7 +61,7 @@ public:
 protected:
 
   Server(const Server &s)
-  {}
+  { (void)s; }
 
   virtual void on_new_connection(Connection &c) = 0;
 

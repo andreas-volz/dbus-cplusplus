@@ -50,6 +50,11 @@ public:
     return _data->value.operator T();
   }
 
+  Variant value() const
+  {
+    return _data->value;
+  }
+
   PropertyAdaptor &operator = (const T &t)
   {
     _data->value.clear();
@@ -75,6 +80,14 @@ public:
 
   Message Set(const CallMessage &);
 
+  Message GetAll(const CallMessage &);
+
+  /* signal emitter
+   */
+  void PropertiesChanged(const std::string& interface,
+                         const std::map<std::string, ::DBus::Variant>& changed_properties,
+                         const std::vector<std::string>& invalidated_properties);
+
 protected:
 
   virtual void on_get_property(InterfaceAdaptor &/*interface*/, const std::string &/*property*/, Variant &/*value*/)
@@ -95,9 +108,22 @@ public:
   Variant Get(const std::string &interface, const std::string &property);
 
   void Set(const std::string &interface, const std::string &property, const Variant &value);
+
+  std::map< std::string, ::DBus::Variant > GetAll(const std::string &interface);
+
+  /* signal handlers for this interface
+   */
+  virtual void PropertiesChanged(const std::string& interface,
+                                 const std::map<std::string, ::DBus::Variant>& changed_properties,
+                                 const std::vector<std::string>& invalidated_properties) = 0;
+
+private:
+
+  /* unmarshalers (to unpack the DBus message before calling the actual signal handler)
+   */
+  void _PropertiesChanged_stub(const ::DBus::SignalMessage &sig);
 };
 
 } /* namespace DBus */
 
 #endif//__DBUSXX_PROPERTY_H
-

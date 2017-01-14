@@ -39,6 +39,7 @@ PropertiesAdaptor::PropertiesAdaptor()
 {
   register_method(PropertiesAdaptor, Get, Get);
   register_method(PropertiesAdaptor, Set, Set);
+  register_method(PropertiesAdaptor, GetAll, GetAll);
 }
 
 Message PropertiesAdaptor::Get(const CallMessage &call)
@@ -61,6 +62,9 @@ Message PropertiesAdaptor::Get(const CallMessage &call)
 
   if (!value)
     throw ErrorFailed("requested property not found");
+
+  if (value->signature().empty())
+    throw ErrorFailed("requested property has not been initialized");
 
   on_get_property(*interface, property_name, *value);
 
@@ -96,6 +100,45 @@ Message PropertiesAdaptor::Set(const CallMessage &call)
   return reply;
 }
 
+Message PropertiesAdaptor::GetAll(const CallMessage &call)
+{
+  MessageIter ri = call.reader();
+
+  std::string iface_name;
+  std::string property_name;
+  Variant value;
+
+  ri >> iface_name;
+
+  InterfaceAdaptor *interface = (InterfaceAdaptor *) find_interface(iface_name);
+
+  if (!interface)
+    throw ErrorFailed("requested interface not found");
+
+  PropertyDict *properties;
+  properties = interface->get_all_properties();
+
+  ReturnMessage reply(call);
+
+  MessageIter wi = reply.writer();
+
+  wi << *properties;
+  delete properties;
+  return reply;
+}
+
+void PropertiesAdaptor::PropertiesChanged(const std::string& interface,
+                                          const std::map<std::string, ::DBus::Variant>& changed_properties,
+                                          const std::vector<std::string>& invalidated_properties)
+{
+  ::DBus::SignalMessage sig("PropertiesChanged");
+  ::DBus::MessageIter wi = sig.writer();
+  wi << interface;
+  wi << changed_properties;
+  wi << invalidated_properties;
+  emit_signal(sig);
+}
+
 IntrospectedInterface *PropertiesAdaptor::introspect() const
 {
   static IntrospectedArgument Get_args[] =
@@ -112,10 +155,17 @@ IntrospectedInterface *PropertiesAdaptor::introspect() const
     { "value", "v", true },
     { 0, 0, 0 }
   };
+  static IntrospectedArgument GetAll_args[] =
+  {
+    { "interface_name", "s", true },
+    { "properties", "a{sv}", false },
+    { 0, 0, 0 }
+  };
   static IntrospectedMethod Properties_methods[] =
   {
     { "Get", Get_args },
     { "Set", Set_args },
+    { "GetAll", GetAll_args },
     { 0, 0 }
   };
   static IntrospectedMethod Properties_signals[] =
@@ -139,17 +189,59 @@ IntrospectedInterface *PropertiesAdaptor::introspect() const
 PropertiesProxy::PropertiesProxy()
   : InterfaceProxy(properties_name)
 {
+  connect_signal(PropertiesProxy, PropertiesChanged, _PropertiesChanged_stub);
 }
 
 Variant PropertiesProxy::Get(const std::string &iface, const std::string &property)
 {
-//todo
-  Variant v;
-  return v;
+  CallMessage call;
+  call.member("Get");
+  call.interface("org.freedesktop.DBus.Properties");
+  MessageIter wi = call.writer();
+  wi << iface;
+  wi << property;
+  Message ret = this->invoke_method (call);
+  MessageIter ri = ret.reader ();
+  Variant argout;
+  ri >> argout;
+  return argout;
 }
 
 void PropertiesProxy::Set(const std::string &iface, const std::string &property, const Variant &value)
 {
-//todo
+  CallMessage call;
+  call.member("Set");
+  call.interface("org.freedesktop.DBus.Properties");
+  MessageIter wi = call.writer();
+  wi << iface;
+  wi << property;
+  wi << value;
+  Message ret = this->invoke_method (call);
 }
 
+std::map< std::string, ::DBus::Variant > PropertiesProxy::GetAll(const std::string &iface)
+{
+  CallMessage call;
+  call.member("GetAll");
+  call.interface("org.freedesktop.DBus.Properties");
+  MessageIter wi = call.writer();
+  wi << iface;
+  Message ret = this->invoke_method (call);
+  MessageIter ri = ret.reader ();
+  std::map< std::string, ::DBus::Variant > argout;
+  ri >> argout;
+  return argout;
+}
+
+void PropertiesProxy::_PropertiesChanged_stub(const ::DBus::SignalMessage &sig)
+{
+  ::DBus::MessageIter ri = sig.reader();
+
+  std::string iface;
+  ri >> iface;
+  std::map< std::string, ::DBus::Variant > changed_properties;
+  ri >> changed_properties;
+  std::vector< std::string > invalidated_properties;
+  ri >> invalidated_properties;
+  PropertiesChanged(iface, changed_properties, invalidated_properties);
+}
