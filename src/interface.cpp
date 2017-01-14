@@ -113,6 +113,28 @@ void InterfaceAdaptor::set_property(const std::string &name, Variant &value)
   throw ErrorFailed("requested property not found");
 }
 
+PropertyDict *InterfaceAdaptor::get_all_properties()
+{
+  PropertyTable::iterator pti;
+  PropertyDict *dict = new PropertyDict();
+
+  for (pti = _properties.begin(); pti != _properties.end(); ++pti)
+  {
+    // Skip unreadable properties
+    if (!pti->second.read)
+      continue;
+
+    Variant v = pti->second.value;
+    // Skip uninitialized properties
+    if (v.signature().empty())
+      continue;
+
+    std::string key = pti->first;
+    (*dict)[key] = v;
+  }
+  return dict;
+}
+
 InterfaceProxy *ProxyBase::find_interface(const std::string &name)
 {
   InterfaceProxyTable::const_iterator ii = _interfaces.find(name);

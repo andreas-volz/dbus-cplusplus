@@ -129,6 +129,7 @@ const std::string &Interface::name() const
 */
 
 typedef std::map< std::string, Slot<Message, const CallMessage &> > MethodTable;
+typedef std::map< std::string, Variant > PropertyDict;
 
 class DXXAPI InterfaceAdaptor : public Interface, public virtual AdaptorBase
 {
@@ -143,6 +144,8 @@ public:
   Variant *get_property(const std::string &name);
 
   void set_property(const std::string &name, Variant &value);
+
+  PropertyDict *get_all_properties();
 
   virtual IntrospectedInterface *introspect() const
   {

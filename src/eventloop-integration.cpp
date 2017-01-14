@@ -34,6 +34,7 @@
 #include <dbus/dbus.h>
 
 /* STD */
+#include <unistd.h>
 #include <string.h>
 #include <cassert>
 #include <sys/poll.h>

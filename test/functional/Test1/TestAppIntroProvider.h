@@ -12,28 +12,36 @@ using namespace std;
 class TestAppIntroProvider :
   public DBusCpp::Test::Com::Intro_adaptor,
   public DBus::IntrospectableAdaptor,
+  public DBus::PropertiesAdaptor,
   public DBus::ObjectAdaptor
 {
 public:
-  TestAppIntroProvider(DBus::Connection &connection, TestAppIntro *testComIntro) :
-    DBus::ObjectAdaptor(connection, "/DBusCpp/Test/Com/Intro"),
-    mTestAppIntro(testComIntro)
+  TestAppIntroProvider(DBus::Connection &connection) :
+    DBus::ObjectAdaptor(connection, "/DBusCpp/Test/Com/Intro")
   {}
 
   void test1()
   {
     cout << "Test1" << endl;
-    mTestAppIntro->test1Result();
+    this->test1Result();
   }
 
   void testByte(const uint8_t &Byte)
   {
     printf("TestByte: %d\n", Byte);
-    mTestAppIntro->testByteResult(Byte);
+    this->testByteResult(Byte);
   }
 
-private:
-  TestAppIntro *mTestAppIntro;
+  void testPropChanged(const std::string& val)
+  {
+    cout << "testPropChanged" << endl;
+    testProperty = val;
+    std::map<std::string, DBus::Variant> changed_props;
+    changed_props["testProperty"] = testProperty.value();
+    this->PropertiesChanged(this->DBusCpp::Test::Com::Intro_adaptor::name(),
+                            changed_props,
+                            std::vector<std::string>());
+  }
 };
 
 #endif // TEST_COM_INTRO_PROVIDER_H
