@@ -31,10 +31,68 @@
 #include <cstdlib>
 #include <stdarg.h>
 
+#if !HAVE_WIN32
+#include <errno.h>
+#include <unistd.h>
+#endif
+
 #include "message_p.h"
 #include "internalerror.h"
 
 namespace DBus {
+
+UnixFD::UnixFD()
+  : _fd(-1)
+{
+}
+
+UnixFD::UnixFD(int fd)
+  : _fd(fd)
+{
+#if HAVE_WIN32
+  if (_fd != -1)
+    throw ErrorInvalidArgs("Unix FDs not supported under windows");
+#endif
+}
+
+UnixFD::~UnixFD()
+{
+#if !HAVE_WIN32
+  if (_fd != -1)
+    close (_fd);
+#endif
+}
+
+UnixFD::UnixFD(const UnixFD &o)
+{
+  _fd = -1;
+#if !HAVE_WIN32
+  if (o._fd != -1) {
+    _fd = dup(o._fd);
+    if (_fd == -1)
+      throw Error("dup:errno", toString(errno).c_str());
+  }
+#endif
+}
+
+UnixFD &UnixFD::operator=(const UnixFD &o)
+{
+  if (this == &o)
+    return *this;
+
+#if !HAVE_WIN32
+  if (_fd != -1) {
+    close (_fd);
+    _fd = -1;
+  }
+  if (o._fd != -1) {
+    _fd = dup(o._fd);
+    if (_fd == -1)
+      throw Error("dup:errno", toString(errno).c_str());
+  }
+#endif
+  return *this;
+}
 
 Variant::Variant()
   : _msg(CallMessage()) // dummy message used as temporary storage for variant data

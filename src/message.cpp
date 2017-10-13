@@ -30,6 +30,10 @@
 #include <dbus/dbus.h>
 #include <cstdlib>
 
+#if !HAVE_WIN32
+#include <unistd.h>
+#endif
+
 #include "internalerror.h"
 #include "message_p.h"
 
@@ -224,6 +228,18 @@ const char *MessageIter::get_signature()
   return chars;
 }
 
+bool MessageIter::append_unix_fd(int fd)
+{
+  return append_basic(DBUS_TYPE_UNIX_FD, &fd);
+}
+
+int MessageIter::get_unix_fd()
+{
+  int fd;
+  get_basic(DBUS_TYPE_UNIX_FD, &fd);
+  return fd;
+}
+
 MessageIter MessageIter::recurse()
 {
   MessageIter iter(msg());
@@ -320,6 +336,7 @@ static bool is_basic_type(int typecode)
   case 's':
   case 'o':
   case 'g':
+  case 'h':
     return true;
   default:
     return false;
@@ -330,7 +347,19 @@ void MessageIter::copy_data(MessageIter &to)
 {
   for (MessageIter &from = *this; !from.at_end(); ++from)
   {
-    if (is_basic_type(from.type()))
+    if (from.type() == 'h')
+    {
+#if HAVE_WIN32
+      throw ErrorInvalidArgs("Unix FDs not supported under windows");
+#else
+      debug_log("copying unix fd");
+
+      int fd = from.get_unix_fd();
+      to.append_unix_fd(fd);
+      close(fd);
+#endif
+    }
+    else if (is_basic_type(from.type()))
     {
       debug_log("copying basic type: %c", from.type());
 

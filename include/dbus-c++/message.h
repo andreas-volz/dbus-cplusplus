@@ -107,6 +107,10 @@ public:
 
   char *signature() const; //returned string must be manually free()'d
 
+  bool append_unix_fd(int fd);
+
+  int get_unix_fd();
+
   MessageIter recurse();
 
   bool append_array(char type, const void *ptr, size_t length);

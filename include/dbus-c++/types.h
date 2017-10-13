@@ -64,6 +64,21 @@ struct DXXAPI Signature : public std::string
 
 struct DXXAPI Invalid {};
 
+class DXXAPI UnixFD
+{
+public:
+  UnixFD();
+  explicit UnixFD(int fd);
+  ~UnixFD();
+  UnixFD(const UnixFD& o);
+  UnixFD& operator = (const UnixFD& o);
+
+  int fd() const { return _fd; }
+
+private:
+  int _fd;
+};
+
 class DXXAPI Variant
 {
 public:
@@ -241,6 +256,13 @@ template <> struct type<Signature>
     return "g";
   }
 };
+template <> struct type<UnixFD>
+{
+  static std::string sig()
+  {
+    return "h";
+  }
+};
 template <> struct type<Invalid>
 {
   static std::string sig()
@@ -386,6 +408,12 @@ inline DBus::MessageIter &operator << (DBus::MessageIter &iter, const DBus::Path
 inline DBus::MessageIter &operator << (DBus::MessageIter &iter, const DBus::Signature &val)
 {
   iter.append_signature(val.c_str());
+  return iter;
+}
+
+inline DBus::MessageIter &operator << (DBus::MessageIter &iter, const DBus::UnixFD &val)
+{
+  iter.append_unix_fd(val.fd());
   return iter;
 }
 
@@ -542,6 +570,12 @@ inline DBus::MessageIter &operator >> (DBus::MessageIter &iter, DBus::Path &val)
 inline DBus::MessageIter &operator >> (DBus::MessageIter &iter, DBus::Signature &val)
 {
   val = iter.get_signature();
+  return ++iter;
+}
+
+inline DBus::MessageIter &operator >> (DBus::MessageIter &iter, DBus::UnixFD &val)
+{
+  val = DBus::UnixFD(iter.get_unix_fd());
   return ++iter;
 }
 
