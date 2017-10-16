@@ -52,6 +52,12 @@ Error::Error(const char *name, const char *message)
   set(name, message);
 }
 
+Error::Error(const std::string &name, const std::string &message)
+  : _int(new InternalError)
+{
+  set(name, message);
+}
+
 Error::Error(Message &m)
   : _int(new InternalError)
 {
@@ -80,6 +86,11 @@ bool Error::is_set() const
 void Error::set(const char *name, const char *message)
 {
   dbus_set_error_const(&(_int->error), name, message);
+}
+
+void Error::set(const std::string &name, const std::string &message)
+{
+  dbus_set_error(&(_int->error), name.c_str(), "%s", message.c_str());
 }
 
 const char *Error::what() const throw()

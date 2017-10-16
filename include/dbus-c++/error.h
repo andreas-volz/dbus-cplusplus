@@ -46,6 +46,8 @@ public:
 
   Error(const char *name, const char *message);
 
+  Error(const std::string &name, const std::string &message);
+
   Error(Message &);
 
   ~Error() throw();
@@ -58,6 +60,8 @@ public:
 
   void set(const char *name, const char *message);
   // parameters MUST be static strings
+
+  void set(const std::string &name, const std::string &message);
 
   bool is_set() const;
 
