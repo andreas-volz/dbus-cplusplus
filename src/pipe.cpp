@@ -83,5 +83,5 @@ ssize_t Pipe::read(void *buffer, unsigned int &nbytes)
 void Pipe::signal()
 {
   // TODO: ignoring return of read/write generates warning; maybe relevant for eventloop work...
-  ::write(_fd_write, '\0', 1);
+  ::write(_fd_write, "", 1);
 }
