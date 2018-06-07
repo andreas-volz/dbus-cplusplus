@@ -204,10 +204,10 @@ void generate_proxy(Xml::Document &doc, const char *filename)
       Xml::Nodes args = method["arg"];
       Xml::Nodes args_in = args.select("direction", "in");
       Xml::Nodes args_out = args.select("direction", "out");
-      Xml::Nodes annotations = args["annotation"];
+      Xml::Nodes annotations_out = args_out["annotation"];
       Xml::Nodes method_annotations = method["annotation"];
       Xml::Nodes annotations_noreply = method_annotations.select("name", "org.freedesktop.DBus.Method.NoReply");
-      Xml::Nodes annotations_object = annotations.select("name", "org.freedesktop.DBus.Object");
+      Xml::Nodes annotations_out_object = annotations_out.select("name", "org.freedesktop.DBus.Object");
       string arg_object;
       bool annotation_noreply_value = false;
 
@@ -222,9 +222,9 @@ void generate_proxy(Xml::Document &doc, const char *filename)
         }
       }
 
-      if (!annotations_object.empty())
+      if (!annotations_out_object.empty())
       {
-        arg_object = annotations_object.front()->get("value");
+        arg_object = annotations_out_object.front()->get("value");
       }
 
       if (args_out.size() == 0 || args_out.size() > 1)
@@ -358,7 +358,7 @@ void generate_proxy(Xml::Document &doc, const char *filename)
         // generate extra code to wrap object
         if (arg_object.length())
         {
-          body << tab << tab << signature_to_type(arg.get("type")) << "_" << arg_name << ";" << endl;
+          body << tab << tab << signature_to_type(arg.get("type")) << " _" << arg_name << ";" << endl;
           body << tab << tab << "_" << arg_name << " << " << arg_name << ";" << endl;
 
           arg_name = string("_") + arg_name;
@@ -450,7 +450,7 @@ void generate_proxy(Xml::Document &doc, const char *filename)
 
           if (arg_object.length())
           {
-            body << tab << tab << signature_to_type(arg.get("type")) << "_" << arg_name << ";" << endl;
+            body << tab << tab << signature_to_type(arg.get("type")) << " _" << arg_name << ";" << endl;
           }
 
           if (arg_object.length())

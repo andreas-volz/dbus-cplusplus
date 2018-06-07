@@ -274,13 +274,13 @@ void generate_adaptor(Xml::Document &doc, const char *filename)
       Xml::Nodes args = method["arg"];
       Xml::Nodes args_in = args.select("direction", "in");
       Xml::Nodes args_out = args.select("direction", "out");
-      Xml::Nodes annotations = args["annotation"];
-      Xml::Nodes annotations_object = annotations.select("name", "org.freedesktop.DBus.Object");
+      Xml::Nodes annotations_out = args_out["annotation"];
+      Xml::Nodes annotations_out_object = annotations_out.select("name", "org.freedesktop.DBus.Object");
       string arg_object;
 
-      if (!annotations_object.empty())
+      if (!annotations_out_object.empty())
       {
-        arg_object = annotations_object.front()->get("value");
+        arg_object = annotations_out_object.front()->get("value");
       }
 
       body << tab << "virtual ";
@@ -531,16 +531,7 @@ void generate_adaptor(Xml::Document &doc, const char *filename)
         {
           Xml::Node &arg = **ao;
 
-          body << tab << tab << signature_to_type(arg.get("type")) << " argout" << i;
-
-          if (args_out.size() == 1) // a single 'out' parameter will be assigned
-          {
-            body << " = ";
-          }
-          else // multible 'out' parameters will be handled as parameters below
-          {
-            body << ";" << endl;
-          }
+          body << tab << tab << signature_to_type(arg.get("type")) << " argout" << i << ";" << endl;
         }
       }
 
@@ -568,25 +559,29 @@ void generate_adaptor(Xml::Document &doc, const char *filename)
         }
       }
 
-      // generate in '<<' operation
-      i = 0;
-      for (Xml::Nodes::iterator ai = args_in.begin(); ai != args_in.end(); ++ai, ++i)
+      body << tab << tab;
+      
       {
-        Xml::Node &arg = **ai;
-        Xml::Nodes annotations = arg["annotation"];
-        Xml::Nodes annotations_object = annotations.select("name", "org.freedesktop.DBus.Object");
+        Xml::Nodes annotations_out = args_out["annotation"];
+        Xml::Nodes annotations_out_object = annotations_out.select("name", "org.freedesktop.DBus.Object");
         string arg_object;
 
-        if (!annotations_object.empty())
+        if (!annotations_out_object.empty())
         {
-          arg_object = annotations_object.front()->get("value");
+          arg_object = annotations_out_object.front()->get("value");
         }
-      }
-
-      // do correct indent
-      if (args_out.size() != 1)
-      {
-        body << tab << tab;
+        if (args_out.size() == 1)
+        {
+          if (arg_object.length())
+          {
+            body << "_argout1 = ";
+          }
+          else
+          {
+            body << "argout1 = ";
+          }
+          
+        }
       }
 
       body << method.get("name") << "(";
