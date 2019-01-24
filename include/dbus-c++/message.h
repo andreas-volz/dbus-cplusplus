@@ -163,7 +163,7 @@ public:
 
   Message(Private *, bool incref = true);
 
-  Message(const Message &m);
+  Message(const Message &m, bool share_private = true);
 
   ~Message();
 
@@ -227,6 +227,8 @@ public:
 
   ErrorMessage(const Message &, const char *name, const char *message);
 
+  ErrorMessage(const ErrorMessage &m, bool share_private = true);
+
   const char *name() const;
 
   bool name(const char *n);
@@ -244,6 +246,8 @@ public:
   SignalMessage(const char *name);
 
   SignalMessage(const char *path, const char *interface, const char *name);
+
+  SignalMessage(const SignalMessage &m, bool share_private = true);
 
   const char *interface() const;
 
@@ -273,6 +277,8 @@ public:
 
   CallMessage(const char *dest, const char *path, const char *iface, const char *method);
 
+  CallMessage(const CallMessage &m, bool share_private = true);
+
   const char *interface() const;
 
   bool interface(const char *i);
@@ -300,6 +306,8 @@ class DXXAPI ReturnMessage : public Message
 public:
 
   ReturnMessage(const CallMessage &callee);
+
+  ReturnMessage(const ReturnMessage &m, bool share_private = true);
 
   const char *signature() const;
 };

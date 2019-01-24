@@ -376,17 +376,28 @@ Message::Message()
 Message::Message(Message::Private *p, bool incref)
   : _pvt(p)
 {
-  if (_pvt->msg && incref) dbus_message_ref(_pvt->msg);
+  if (_pvt->msg && incref) {
+      debug_log("%s About to ref msg this %p msg %p\n", __FUNCTION__, this, _pvt->msg);
+      dbus_message_ref(_pvt->msg);
+  }
 }
 
-Message::Message(const Message &m)
+Message::Message(const Message &m, bool share_private)
   : _pvt(m._pvt)
 {
+  if (!share_private) {
+      // Create a new Private wrapper to avoid sharing refcount
+      // instances across threads
+      _pvt = new Private;
+      _pvt->msg = m._pvt->msg;
+  }
+  debug_log("%s About to ref msg this %p msg %p\n", __FUNCTION__, this, _pvt->msg);
   dbus_message_ref(_pvt->msg);
 }
 
 Message::~Message()
 {
+  debug_log("%s About to unref msg this %p msg %p\n", __FUNCTION__, this, _pvt->msg);
   dbus_message_unref(_pvt->msg);
 }
 
@@ -394,8 +405,10 @@ Message &Message::operator = (const Message &m)
 {
   if (&m != this)
   {
+    debug_log("%s About to unref msg this %p msg %p\n", __FUNCTION__, this, _pvt->msg);
     dbus_message_unref(_pvt->msg);
     _pvt = m._pvt;
+    debug_log("%s About to ref msg this %p msg %p\n", __FUNCTION__, this, _pvt->msg);
     dbus_message_ref(_pvt->msg);
   }
   return *this;
@@ -404,6 +417,7 @@ Message &Message::operator = (const Message &m)
 Message Message::copy()
 {
   Private *pvt = new Private(dbus_message_copy(_pvt->msg));
+  debug_log("%s Copied %p\n", __FUNCTION__, pvt->msg);
   return Message(pvt);
 }
 
@@ -493,11 +507,18 @@ MessageIter Message::reader() const
 ErrorMessage::ErrorMessage()
 {
   _pvt->msg = dbus_message_new(DBUS_MESSAGE_TYPE_ERROR);
+  debug_log("%s Created msg %p\n", __FUNCTION__, _pvt->msg);
+}
+
+ErrorMessage::ErrorMessage(const ErrorMessage &m, bool share_private)
+    :Message(m, share_private)
+{
 }
 
 ErrorMessage::ErrorMessage(const Message &to_reply, const char *name, const char *message)
 {
   _pvt->msg = dbus_message_new_error(to_reply._pvt->msg, name, message);
+  debug_log("%s Created error msg %p\n", __FUNCTION__, _pvt->msg);
 }
 
 bool ErrorMessage::operator == (const ErrorMessage &m) const
@@ -522,11 +543,18 @@ SignalMessage::SignalMessage(const char *name)
 {
   _pvt->msg = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
   member(name);
+  debug_log("%s Created signal msg %p\n", __FUNCTION__, _pvt->msg);
+}
+
+SignalMessage::SignalMessage(const SignalMessage &m, bool share_private)
+    :Message(m, share_private)
+{
 }
 
 SignalMessage::SignalMessage(const char *path, const char *interface, const char *name)
 {
   _pvt->msg = dbus_message_new_signal(path, interface, name);
+  debug_log("%s Created signal msg %p\n", __FUNCTION__, _pvt->msg);
 }
 
 bool SignalMessage::operator == (const SignalMessage &m) const
@@ -577,11 +605,18 @@ bool SignalMessage::path(const char *p)
 CallMessage::CallMessage()
 {
   _pvt->msg = dbus_message_new(DBUS_MESSAGE_TYPE_METHOD_CALL);
+  debug_log("%s Created call msg %p\n", __FUNCTION__, _pvt->msg);
+}
+
+CallMessage::CallMessage(const CallMessage &m, bool share_private)
+    :Message(m, share_private)
+{
 }
 
 CallMessage::CallMessage(const char *dest, const char *path, const char *iface, const char *method)
 {
   _pvt->msg = dbus_message_new_method_call(dest, path, iface, method);
+  debug_log("%s Created call msg %p\n", __FUNCTION__, _pvt->msg);
 }
 
 bool CallMessage::operator == (const CallMessage &m) const
@@ -637,6 +672,12 @@ const char *CallMessage::signature() const
 ReturnMessage::ReturnMessage(const CallMessage &callee)
 {
   _pvt = new Private(dbus_message_new_method_return(callee._pvt->msg));
+  debug_log("%s Created return msg %p\n", __FUNCTION__, _pvt->msg);
+}
+
+ReturnMessage::ReturnMessage(const ReturnMessage &m, bool share_private)
+    :Message(m, share_private)
+{
 }
 
 const char *ReturnMessage::signature() const
