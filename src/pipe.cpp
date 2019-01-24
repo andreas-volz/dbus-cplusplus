@@ -60,28 +60,118 @@ Pipe::Pipe(void(*handler)(const void *data, void *buffer, unsigned int nbyte), c
   }
 }
 
+
+// this will block if the pipe is full.
 void Pipe::write(const void *buffer, unsigned int nbytes)
 {
-  // TODO: ignoring return of read/write generates warning; maybe relevant for eventloop work...
-  // first write the size into the pipe...
-  ::write(_fd_write, static_cast <const void *>(&nbytes), sizeof(nbytes));
+    ssize_t rc;
+    ssize_t bytes_written = 0;
+
+    // Write size handling EINTR and partial writes
+    while (bytes_written < sizeof(nbytes)) {
+        rc = ::write(_fd_write,
+                     ((char*)static_cast <const unsigned int *>(&nbytes)) + bytes_written,
+                     sizeof(nbytes)-bytes_written);
+        if (-1 == rc) {
+            if (errno != EINTR) {
+                nbytes = 0;
+                return;
+            }
+            continue;
+        }
+        bytes_written += rc;
+    }
+
+    //Write payload handling EINTR and partial writes
+    bytes_written = 0;
+    while (bytes_written < sizeof(nbytes)) {
+        rc = ::write(_fd_write,
+                     static_cast <const char *>(buffer) + bytes_written,
+                     nbytes-bytes_written);
+        if (-1 == rc) {
+            if (errno != EINTR) {
+                nbytes = 0;
+                return;
+            }
+            continue;
+        }
+        bytes_written += rc;
+    }
 
   // ...then write the real data
-  ::write(_fd_write, buffer, nbytes);
+
 }
 
 ssize_t Pipe::read(void *buffer, unsigned int &nbytes)
 {
-  // TODO: ignoring return of read/write generates warning; maybe relevant for eventloop work...
-  // first read the size from the pipe...
-  ::read(_fd_read, &nbytes, sizeof(nbytes));
 
-  //ssize_t size = 0;
-  return ::read(_fd_read, buffer, nbytes);
+    // Read size handling EINTR and partial reads. Note: Since the
+    // size is written in a single write() and this needs to return
+    // without blocking if no data is waiting, we can leave the "size"
+    // read as non-blocking.
+    nbytes = 0;
+    ssize_t rc;
+    ssize_t size = 0;
+    while (size < sizeof(unsigned int)) {
+        rc = ::read(_fd_read, ((char*)&nbytes) + size, sizeof(unsigned int) - size);
+        if (-1 == rc) {
+            if (errno != EINTR) {
+                nbytes = 0;
+                // wait for eagain since the entire size should be showing up ASAP since
+                // it is written in a single call.
+                if (errno != EAGAIN) {
+                    debug_log("Unexpected errno of %i when reading fd %i\n", errno, _fd_read);
+                    return -1;
+                }
+                return 0;
+            }
+            continue;
+        }
+        size += rc;
+    }
+
+
+    // Change payload read to BLOCKING read so we don't fastloop and
+    // burn CPU waiting for the complete payload of the data to show up.
+    int old_flags = fcntl(_fd_read, F_GETFL);
+    if (old_flags == -1) {
+        // trouble
+        debug_log("%s fcntl() failed with errno %i for FD %i\n",
+                __FUNCTION__, errno, _fd_read);
+    } else {
+        // make blocking if was non-blocking
+        if (old_flags & O_NONBLOCK) {
+            fcntl(_fd_read, F_SETFL, old_flags & ~O_NONBLOCK);
+        }
+    }
+
+    // Read payload handling EINTR and partial reads
+    size = 0;
+    while (size < nbytes ) {
+        rc = ::read(_fd_read, ((char*)buffer) + size, nbytes - size);
+        if (-1 == rc) {
+            if (errno != EINTR) {
+                nbytes = 0;
+                size = 0;
+                debug_log("%s read() of FD %i failed unexpected with errno %i", __FUNCTION__, _fd_read, errno);
+                goto cleanup;
+            }
+            continue;
+        }
+        size += rc;
+    }
+
+cleanup:
+    if ((old_flags != -1) && (old_flags & O_NONBLOCK)) {
+        //restore flags if needed
+        fcntl(_fd_read, F_SETFL, old_flags);
+    }
+
+    return size;
 }
 
 void Pipe::signal()
 {
-  // TODO: ignoring return of read/write generates warning; maybe relevant for eventloop work...
-  ::write(_fd_write, '\0', 1);
+  // Write a "message" w/size prefix of size 0
+  write("", 0);
 }

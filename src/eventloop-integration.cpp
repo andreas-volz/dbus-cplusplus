@@ -145,8 +145,18 @@ void BusDispatcher::del_pipe(Pipe *pipe)
 
 void BusDispatcher::do_iteration()
 {
+    std::vector<int> pipe_fds;
+    for (std::list <Pipe *>::iterator p_it = pipe_list.begin();
+         p_it != pipe_list.end();
+         ++p_it)
+    {
+        Pipe *read_pipe = *p_it;
+        pipe_fds.push_back(read_pipe->_fd_read);
+    }
+
+
   dispatch_pending();
-  dispatch();
+  dispatch(pipe_fds);
 }
 
 Timeout *BusDispatcher::add_timeout(Timeout::Internal *ti)

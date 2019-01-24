@@ -148,7 +148,7 @@ DefaultMainLoop::~DefaultMainLoop()
   _mutex_t.unlock();
 }
 
-void DefaultMainLoop::dispatch()
+void DefaultMainLoop::dispatch(std::vector<int>& pipe_fds)
 {
   _mutex_w.lock();
 
@@ -158,6 +158,8 @@ void DefaultMainLoop::dispatch()
   {
     nfd = nfd + 2;
   }
+
+  nfd +=  pipe_fds.size();
 
   pollfd fds[nfd];
 
@@ -177,14 +179,21 @@ void DefaultMainLoop::dispatch()
 
   if (_fdunlock)
   {
+    // only monitor "incoming" FD
     fds[nfd].fd = _fdunlock[0];
     fds[nfd].events = POLLIN | POLLOUT | POLLPRI ;
     fds[nfd].revents = 0;
+    ++nfd;
+  }
 
-    nfd++;
-    fds[nfd].fd = _fdunlock[1];
-    fds[nfd].events = POLLIN | POLLOUT | POLLPRI ;
-    fds[nfd].revents = 0;
+
+
+  for (std::vector<int>::iterator i = pipe_fds.begin(); i != pipe_fds.end(); i++)
+  {
+      fds[nfd].fd = *i;
+      fds[nfd].events = POLLIN | POLLPRI | POLLRDHUP;
+      fds[nfd].revents = 0;
+      ++nfd;
   }
 
   _mutex_w.unlock();

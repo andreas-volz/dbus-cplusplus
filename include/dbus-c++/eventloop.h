@@ -27,6 +27,7 @@
 
 #include <pthread.h>
 #include <list>
+#include <vector>
 
 #include "api.h"
 #include "util.h"
@@ -205,7 +206,7 @@ public:
 
   virtual ~DefaultMainLoop();
 
-  virtual void dispatch();
+  virtual void dispatch(std::vector<int>& pipe_fds);
 
   int _fdunlock[2];
 private:
